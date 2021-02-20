@@ -100,6 +100,8 @@ void Motion::wakeUp()
   }
 }
 
+/////////////////////////////////////////
+
 void Motion::rest()
 {
   try

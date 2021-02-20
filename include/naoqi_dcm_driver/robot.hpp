@@ -50,6 +50,7 @@
 #include "naoqi_dcm_driver/memory.hpp"
 #include "naoqi_dcm_driver/dcm.hpp"
 #include "naoqi_dcm_driver/motion.hpp"
+#include "naoqi_dcm_driver/posture.hpp"
 
 template<typename T, size_t N>
 T * end(T (&ra)[N]) {
@@ -131,6 +132,9 @@ private:
 
   /** pointer to Motion class */
   boost::shared_ptr <Motion> motion_;
+
+  /** pointer to Posture class */
+  boost::shared_ptr <Posture> posture_;
 
   /** subscrier to MoveTo */
   ros::Subscriber cmd_moveto_sub_;

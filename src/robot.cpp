@@ -38,7 +38,7 @@ Robot::Robot(qi::SessionPtr session):
                topic_queue_(10),
                prefix_("naoqi_dcm"),
                high_freq_(50.0),
-               controller_freq_(15.0),
+               controller_freq_(30.0),
                joint_precision_(0.1),
                odom_frame_("odom"),
                use_dcm_(false),
@@ -145,6 +145,9 @@ bool Robot::connect()
   // Initialize Motion Wrapper
   motion_ = boost::shared_ptr<Motion>(new Motion(_session));
 
+  // Initialize Posture Wrapper
+  posture_ = boost::shared_ptr<Posture>(new Posture(_session));
+
   // check if the robot is waked up
   if (motor_groups_.size() == 1)
   {
@@ -152,7 +155,10 @@ bool Robot::connect()
       motion_->wakeUp();
   }
   else if (!use_dcm_)
+  {
     motion_->wakeUp();
+  }
+
   if (!motion_->robotIsWakeUp())
   {
     ROS_ERROR("Please, wakeUp the robot to be able to set stiffness");
@@ -160,6 +166,12 @@ bool Robot::connect()
     return false;
   }
 
+  if (motion_->robotIsWakeUp())
+  {
+    posture_->StandInit();
+    std::cout << " Stand Init" << std::endl;
+  }
+  
   if (use_dcm_)
     motion_->manageConcurrence();
 

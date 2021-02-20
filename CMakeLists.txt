@@ -42,12 +42,14 @@ add_executable(${projectName}
   src/memory.cpp
   src/dcm.cpp
   src/motion.cpp
+  src/posture.cpp
   include/naoqi_dcm_driver/robot.hpp
   include/naoqi_dcm_driver/tools.hpp
   include/naoqi_dcm_driver/diagnostics.hpp
   include/naoqi_dcm_driver/memory.hpp
   include/naoqi_dcm_driver/dcm.hpp
   include/naoqi_dcm_driver/motion.hpp
+  include/naoqi_dcm_driver/posture.hpp
 )
 
 target_link_libraries(${projectName}
