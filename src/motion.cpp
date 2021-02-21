@@ -195,7 +195,7 @@ std::vector<double> Motion::getAngles(const std::string &robot_part)
   {
     ROS_WARN("Motion: Failed to get joints angles!\n\tTrace: %s", e.what());
   }
-
+  
   return res;
 }
 

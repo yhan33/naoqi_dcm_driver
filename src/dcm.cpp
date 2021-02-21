@@ -103,7 +103,7 @@ bool DCM::createPositionActuatorAlias(const std::vector <std::string> &joints)
   }
   catch(const std::exception& e)
   {
-    ROS_ERROR("DCM: Could not create alias for jonts positions!\n\tTrace: %s", e.what());
+    ROS_ERROR("DCM: Could not create alias for joint positions!\n\tTrace: %s", e.what());
     return false;
   }
   return true;

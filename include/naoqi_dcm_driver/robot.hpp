@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -109,6 +109,12 @@ private:
   //! @brief publish joint states
   void publishJointStateFromAlMotion();
 
+  ////////////////////////////
+  //! @brief publish joint states
+  void publishJointCurrentFromAlMotion();
+  void publishFSRFromAlMotion();
+  ////////////////////////////
+
   //! @brief set joints values
   void writeJoints();
 
@@ -154,11 +160,28 @@ private:
   /** joint states publisher */
   ros::Publisher joint_states_pub_;
 
+  /** joint current publisher */  //////////////////////////////////////////////// Rick Add //////////////////////////
+  ros::Publisher joint_current_pub_;
+  
+  ros::Publisher fsr_pub_;
+
+
+
+
   /** stiffness data */
   std_msgs::Float32 stiffness_;
 
   /** joint states data */
   sensor_msgs::JointState joint_states_topic_;
+
+  /** joint current data */    //////////////////////////////////////////////// Rick Add //////////////////////////
+  sensor_msgs::JointState joint_current_topic_;
+  
+  sensor_msgs::JointState fsr_topic_;
+
+
+
+
 
   /** controller manager */
   controller_manager::ControllerManager* manager_;

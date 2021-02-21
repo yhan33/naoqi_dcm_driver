@@ -17,7 +17,6 @@
 
 // ROS Headers
 #include <ros/ros.h>
-
 #include "naoqi_dcm_driver/memory.hpp"
 #include "naoqi_dcm_driver/tools.hpp"
 
@@ -33,9 +32,12 @@ Memory::Memory(const qi::SessionPtr& session)
   }
 }
 
+
 void Memory::init(const std::vector <std::string> &joints_names)
 {
   keys_positions_ = initMemoryKeys(joints_names);
+  keys_currents_  = initMemoryKeys2(joints_names); // Rick Add: current reading
+  keys_fsrs_      = initMemoryKeys3();             // Rick Add: fsr reading
 }
 
 std::vector <std::string> Memory::initMemoryKeys(const std::vector <std::string> &joints)
@@ -69,6 +71,46 @@ std::vector<float> Memory::getListData(const std::vector <std::string> &keys)
   std::vector<float> joint_positions = fromAnyValueToFloatVector(keys_qi);
   return joint_positions;
 }
+
+
+/* simply modify the previous code for publishing current sensor data*/
+
+/*     Rick Add for current publish         */
+std::vector <std::string> Memory::initMemoryKeys2(const std::vector <std::string> &joints)
+{
+  std::vector <std::string> keys;
+  for(std::vector<std::string>::const_iterator it=joints.begin(); it!=joints.end(); ++it)
+  {
+    keys.push_back("Device/SubDeviceList/" + *it + "/ElectricCurrent/Sensor/Value");
+  }
+  return keys;
+}
+
+std::vector<float> Memory::getListData2()
+{
+  return getListData(keys_currents_);
+}
+
+/* FSR reading*/
+std::vector <std::string> Memory::initMemoryKeys3()
+{
+  std::vector <std::string> keys;
+  keys.push_back("Device/SubDeviceList/LFoot/FSR/CenterOfPressure/X/Sensor/Value");
+  keys.push_back("Device/SubDeviceList/LFoot/FSR/CenterOfPressure/Y/Sensor/Value");
+  keys.push_back("Device/SubDeviceList/RFoot/FSR/CenterOfPressure/X/Sensor/Value");
+  keys.push_back("Device/SubDeviceList/RFoot/FSR/CenterOfPressure/Y/Sensor/Value");
+  keys.push_back("Device/SubDeviceList/LFoot/FSR/TotalWeight/Sensor/Value");
+  keys.push_back("Device/SubDeviceList/RFoot/FSR/TotalWeight/Sensor/Value");
+  return keys;
+}
+
+std::vector<float> Memory::getListData3()
+{
+  return getListData(keys_fsrs_);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 std::string Memory::getData(const std::string &str)
 {

@@ -39,7 +39,7 @@ void Posture::StandInit()
   {
     ros::Duration(1.0).sleep();
     ROS_INFO_STREAM("Going to standInit ...");
-    posture_proxy_.call<void>("goToPosture","standinit", 0.5);
+    posture_proxy_.call<void>("goToPosture","StandInit", 0.2);
     ros::Duration(3.0).sleep();
   }
   catch (const std::exception& e)

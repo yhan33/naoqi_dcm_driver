@@ -16,11 +16,7 @@
 */
 
 #include <sensor_msgs/JointState.h>
-
 #include <diagnostic_msgs/DiagnosticArray.h>
-
-#include <XmlRpcValue.h>
-
 #include "naoqi_dcm_driver/robot.hpp"
 #include "naoqi_dcm_driver/tools.hpp"
 
@@ -35,10 +31,10 @@ Robot::Robot(qi::SessionPtr session):
                is_connected_(false),
                nhPtr_(new ros::NodeHandle("")),
                body_type_(""),
-               topic_queue_(10),
+               topic_queue_(1),
                prefix_("naoqi_dcm"),
                high_freq_(50.0),
-               controller_freq_(30.0),
+               controller_freq_(40.0),
                joint_precision_(0.1),
                odom_frame_("odom"),
                use_dcm_(false),
@@ -56,8 +52,7 @@ void Robot::stopService() {
 
   if (motion_)
   {
-    /* reset stiffness for arms if using DCM
-     * to prevent its concurrence with ALMotion */
+    /* reset stiffness for arms if using DCM to prevent its concurrence with ALMotion */
     if(use_dcm_)
       motion_->setStiffnessArms(0.0f, 2.0f);
 
@@ -66,8 +61,7 @@ void Robot::stopService() {
       if (motor_groups_[0] == "Body")
         motion_->rest();
 
-    //set stiffness for the whole body
-    //setStiffness(0.0f);
+    //set stiffness for the whole body  setStiffness(0.0f);
     motion_->setStiffnessArms(0.0f, 2.0f);
   }
 
@@ -148,8 +142,9 @@ bool Robot::connect()
   // Initialize Posture Wrapper
   posture_ = boost::shared_ptr<Posture>(new Posture(_session));
 
-  // check if the robot is waked up
-  if (motor_groups_.size() == 1)
+  //////// check if the robot is waked up 
+
+  if (motor_groups_.size() == 1) 
   {
     if (motor_groups_[0] == "Body")
       motion_->wakeUp();
@@ -165,13 +160,16 @@ bool Robot::connect()
     stopService();
     return false;
   }
-
-  if (motion_->robotIsWakeUp())
-  {
-    posture_->StandInit();
-    std::cout << " Stand Init" << std::endl;
-  }
   
+  // Rick added the initialization process stand init process
+  // if (motion_->robotIsWakeUp())
+  // {
+  //   posture_->StandInit();
+  //   std::cout << " Stand Init" << std::endl;
+  // }
+
+  ////////////////////////////////////////
+
   if (use_dcm_)
     motion_->manageConcurrence();
 
@@ -206,21 +204,31 @@ bool Robot::connect()
   joint_states_topic_.name = motion_->getBodyNames("Body"); //Body=JointActuators+Wheels
   joint_states_topic_.position.resize(joint_states_topic_.name.size());
 
+  //read joints names to initialize the joint_current topic
+  joint_current_topic_.header.frame_id = "base_link";
+  joint_current_topic_.name = motion_->getBodyNames("Body"); //Body=JointActuators+Wheels
+  joint_current_topic_.position.resize(joint_current_topic_.name.size());
+
+  //read joints names to initialize the joint_current topic
+  fsr_topic_.header.frame_id = "base_link";
+  fsr_topic_.name = memory_->initMemoryKeys3();
+  fsr_topic_.position.resize(fsr_topic_.name.size());
+
   //read joints names to initialize the diagnostics
   std::vector<std::string> joints_all_names = motion_->getBodyNames("JointActuators");
-  diagnostics_ = boost::shared_ptr<Diagnostics>(
-        new Diagnostics(_session, &diag_pub_, joints_all_names, robot));
+  diagnostics_ = boost::shared_ptr<Diagnostics>(new Diagnostics(_session, &diag_pub_, joints_all_names, robot));
 
   is_connected_ = true;
 
   // Subscribe/Publish ROS Topics/Services
   subscribe();
 
-  // Turn Stiffness On
+  // Turn Stiffness On !!!!!!!!!!!!
   if (!setStiffness(stiffness_value_))
     return false;
 
-  // Initialize Controller Manager and Controllers
+  // Initialize Controller Manager and Controllers 
+
   try
   {
     manager_ = new controller_manager::ControllerManager( this, *nhPtr_);
@@ -242,13 +250,11 @@ void Robot::subscribe()
 {
   // Subscribe/Publish ROS Topics/Services
   cmd_moveto_sub_ = nhPtr_->subscribe(prefix_+"cmd_moveto", 1, &Robot::commandVelocity, this);
-
   diag_pub_ = nhPtr_->advertise<diagnostic_msgs::DiagnosticArray>(prefix_+"diagnostics", topic_queue_);
-
-  stiffness_pub_ = nhPtr_->advertise<std_msgs::Float32>(prefix_+"stiffnesses", topic_queue_);
-  stiffness_.data = 1.0f;
-
-  joint_states_pub_ = nhPtr_->advertise<sensor_msgs::JointState>("/joint_states", topic_queue_);
+  stiffness_pub_ = nhPtr_->advertise<std_msgs::Float32>(prefix_+"stiffnesses", topic_queue_); stiffness_.data = 1.0f;
+  joint_states_pub_ = nhPtr_->advertise<sensor_msgs::JointState>("/joint_angle", topic_queue_);
+  joint_current_pub_ = nhPtr_->advertise<sensor_msgs::JointState>("/joint_current", topic_queue_);
+  fsr_pub_ = nhPtr_->advertise<sensor_msgs::JointState>("/fsr", topic_queue_);
 }
 
 bool Robot::loadParams()
@@ -280,31 +286,6 @@ bool Robot::loadParams()
     if (prefix_.at(prefix_.length()-1) != '/')
       prefix_ += "/";
 
-  //read HW controllers names
-  XmlRpc::XmlRpcValue params_pepper_dcm;
-  nh.getParam("pepper_dcm", params_pepper_dcm);
-  if (params_pepper_dcm.getType() != XmlRpc::XmlRpcValue::TypeStruct)
-    ROS_ERROR("Please ensure that the list of controllers is TypeStruct");
-
-  XmlRpc::XmlRpcValue::ValueStruct::const_iterator it=params_pepper_dcm.begin();
-  for (; it != params_pepper_dcm.end(); ++it)
-  {
-    XmlRpc::XmlRpcValue::ValueStruct::const_iterator it2 = params_pepper_dcm[it->first].begin();
-    for (; it2 != params_pepper_dcm[it->first].end(); ++it2)
-    {
-      std::string param = (std::string)(it2->first);
-      if (param.compare("joints") == 0)
-      {
-        XmlRpc::XmlRpcValue params_joints = params_pepper_dcm[it->first][it2->first];
-        if (params_joints.getType() == XmlRpc::XmlRpcValue::TypeArray)
-        {
-          xmlToVector(params_joints, &hw_joints_);
-          continue;
-        }
-      }
-    }
-  }
-
   //define the motors groups to control
   std::string motor_groups_temp = "";
   nh.getParam("motor_groups", motor_groups_temp);
@@ -332,16 +313,16 @@ void Robot::controllerLoop()
     if(!is_connected_)
       break;
 
-    //publishBaseFootprint(time);
+    // publishBaseFootprint(time);
 
     stiffness_pub_.publish(stiffness_);
 
-    if (!diagnostics_->publish())
+    if (!diagnostics_->publish()) 
       stopService();
 
-    readJoints();
+    readJoints(); 
 
-    //motion_->stiffnessInterpolation(diagnostics_->getForcedJoints(), 0.3f, 2.0f);
+    // motion_->stiffnessInterpolation(diagnostics_->getForcedJoints(), 0.3f, 2.0f);
 
     try
     {
@@ -353,10 +334,12 @@ void Robot::controllerLoop()
       return;
     }
 
-    writeJoints();
+    writeJoints(); 
 
     //no need if Naoqi Driver is running
-    //publishJointStateFromAlMotion();
+    publishJointStateFromAlMotion();
+    publishJointCurrentFromAlMotion();
+    publishFSRFromAlMotion();
 
     rate.sleep();
   }
@@ -473,14 +456,38 @@ void Robot::readJoints()
 
 void Robot::publishJointStateFromAlMotion(){
   joint_states_topic_.header.stamp = ros::Time::now();
+  std::vector<float> position_data = memory_->getListData();
+  // std::vector<double> position_data = motion_->getAngles("Body");
 
-  std::vector<double> position_data = motion_->getAngles("Body");
   for(int i = 0; i<position_data.size(); ++i)
     joint_states_topic_.position[i] = position_data[i];
 
   joint_states_pub_.publish(joint_states_topic_);
 }
 
+/*Rick Add Read Current from Al Memory*/ ///////////////////////////
+
+void Robot::publishJointCurrentFromAlMotion(){
+  joint_current_topic_.header.stamp = ros::Time::now();
+
+  std::vector<float> qi_joints_currents = memory_->getListData2();
+  for(int i = 0; i< qi_joints_currents.size(); ++i)
+    joint_current_topic_.position[i] = qi_joints_currents[i];
+
+  joint_current_pub_.publish(joint_current_topic_);
+}
+
+void Robot::publishFSRFromAlMotion(){
+  joint_current_topic_.header.stamp = ros::Time::now();
+
+  std::vector<float> qi_fsr = memory_->getListData3();
+  for(int i = 0; i < qi_fsr.size(); ++i)
+    fsr_topic_.position[i] = qi_fsr[i];
+
+  fsr_pub_.publish(fsr_topic_);
+}
+
+///////////////////////////////////////////////////////////////////
 void Robot::writeJoints()
 {
   // Check if there is some change in joints values

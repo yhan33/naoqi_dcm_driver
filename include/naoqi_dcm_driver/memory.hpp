@@ -32,14 +32,30 @@ public:
   //! @brief initialize with joints names to control
   void init(const std::vector <std::string> &joints_names);
 
-  //! @brief initialize memory keys to read
+  //! @brief initialize memory keys to read joint angle
   std::vector <std::string> initMemoryKeys(const std::vector <std::string> &joints);
+
+  //! @brief initialize memory keys to read joint current
+  std::vector <std::string> initMemoryKeys2(const std::vector <std::string> &joints);
+
+  //! @brief initialize memory keys to read fsr
+  std::vector <std::string> initMemoryKeys3();
+
 
   //! @brief Get values of keys
   std::vector<float> getListData();
 
   //! @brief Get values associated with the given list of keys
   std::vector<float> getListData(const std::vector <std::string> &keys);
+
+
+  ///////////////////////////////Rick modified //////////////////////////////////////////////
+  //! @brief Get values of keys
+  std::vector<float> getListData2(); // current sensor
+  std::vector<float> getListData3(); // FSR sensor
+  std::vector<float> getListData4(); // range sensor
+  
+  //////////////////////////////////////////////////////////////////////////////
 
   //! @brief get a key-value pair stored in memory
   std::string getData(const std::string &str);
@@ -53,13 +69,15 @@ public:
   //! @brief unsubscribe from a micro-event
   void unsubscribeFromMicroEvent(const std::string &name,
                                  const std::string &callback_module);
-
+  
 private:
   /** Memory proxy */
   qi::AnyObject memory_proxy_;
 
   /** joints positions keys to read */
   std::vector <std::string> keys_positions_;
+  std::vector <std::string> keys_currents_;
+  std::vector <std::string> keys_fsrs_;
 };
 
 #endif // MEMORY_HPP
